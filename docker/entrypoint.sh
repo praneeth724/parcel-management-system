@@ -28,12 +28,12 @@ fi
 echo "Connecting to the database and ensuring it exists..."
 for i in $(seq 1 30); do
     if php -r '
-        $host = getenv("DB_HOST");
-        $port = getenv("DB_PORT") ?: "4000";
-        $user = getenv("DB_USERNAME");
+        $host = trim((string) getenv("DB_HOST"));
+        $port = trim((string) getenv("DB_PORT")) ?: "4000";
+        $user = trim((string) getenv("DB_USERNAME"));
         $pass = getenv("DB_PASSWORD");
-        $name = getenv("DB_DATABASE");
-        $ca   = getenv("MYSQL_ATTR_SSL_CA");
+        $name = trim((string) getenv("DB_DATABASE"));
+        $ca   = trim((string) getenv("MYSQL_ATTR_SSL_CA"));
         $options = [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION];
         if ($ca) { $options[PDO::MYSQL_ATTR_SSL_CA] = $ca; }
         $pdo = new PDO("mysql:host={$host};port={$port}", $user, $pass, $options);

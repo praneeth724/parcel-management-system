@@ -47,10 +47,13 @@ return [
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '3306'),
-            'database' => env('DB_DATABASE', 'laravel'),
-            'username' => env('DB_USERNAME', 'root'),
+            // trim() guards against a trailing space/newline accidentally pasted
+            // into a hosting dashboard's env var, which otherwise breaks DNS
+            // resolution ("getaddrinfo ... Name or service not known").
+            'host' => trim((string) env('DB_HOST', '127.0.0.1')),
+            'port' => trim((string) env('DB_PORT', '3306')),
+            'database' => trim((string) env('DB_DATABASE', 'laravel')),
+            'username' => trim((string) env('DB_USERNAME', 'root')),
             'password' => env('DB_PASSWORD', ''),
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
@@ -60,7 +63,7 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+                (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => trim((string) env('MYSQL_ATTR_SSL_CA')) ?: null,
             ]) : [],
         ],
 
