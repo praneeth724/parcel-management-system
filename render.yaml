@@ -1,0 +1,69 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Connect this repo to Render as a Blueprint and it provisions the service
+# below. Values marked `sync: false` are secrets you fill in the dashboard;
+# see docs/DEPLOY.md for exactly what goes where.
+
+services:
+  - type: web
+    name: swifttrack
+    runtime: docker
+    plan: free
+    region: singapore          # closest Render region to Sri Lanka; change if you like
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /up        # Laravel's built-in health route
+    autoDeploy: true            # redeploy on every git push
+
+    envVars:
+      # --- Application ---
+      - key: APP_NAME
+        value: "SwiftTrack Courier"
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_TIMEZONE
+        value: Asia/Colombo
+      - key: APP_KEY
+        sync: false             # paste your key (php artisan key:generate --show)
+      - key: APP_URL
+        sync: false             # your Render URL, e.g. https://swifttrack.onrender.com
+
+      # Logs go to Render's live log stream.
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: error
+
+      # --- Off-database session/cache/queue to spare TiDB request units ---
+      - key: SESSION_DRIVER
+        value: cookie
+      - key: CACHE_STORE
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+
+      # --- Database (TiDB Cloud Serverless) ---
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        sync: false             # e.g. gateway01.<region>.prod.aws.tidbcloud.com
+      - key: DB_PORT
+        value: "4000"           # TiDB Serverless default port
+      - key: DB_DATABASE
+        sync: false             # the database name you create in TiDB
+      - key: DB_USERNAME
+        sync: false             # e.g. xxxxxxxx.root
+      - key: DB_PASSWORD
+        sync: false
+      # TiDB Serverless requires TLS; verify against the container's CA bundle.
+      - key: MYSQL_ATTR_SSL_CA
+        value: /etc/ssl/certs/ca-certificates.crt
+
+      # --- Mail (log driver = links written to the log; swap for real SMTP) ---
+      - key: MAIL_MAILER
+        value: log
+
+      # Seed demo data on the first boot only (set to false to skip).
+      - key: RUN_SEED
+        value: "true"

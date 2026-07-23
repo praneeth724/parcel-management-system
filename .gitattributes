@@ -1,5 +1,11 @@
 * text=auto eol=lf
 
+# Shell scripts and Docker files must stay LF — CRLF breaks them in the
+# Linux container ("bad interpreter: /usr/bin/env bash^M").
+*.sh text eol=lf
+docker/entrypoint.sh text eol=lf
+Dockerfile text eol=lf
+
 *.blade.php diff=html
 *.css diff=css
 *.html diff=html

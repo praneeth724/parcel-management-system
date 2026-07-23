@@ -31,7 +31,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', fn () => redirect()->route('track.index'))->name('home');
+// Route::redirect (not a closure) so `php artisan route:cache` works in production.
+Route::redirect('/', '/track')->name('home');
 
 Route::controller(TrackingController::class)->group(function (): void {
     Route::get('/track', 'index')->name('track.index');

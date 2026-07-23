@@ -23,6 +23,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Behind Render's (or any) load balancer, TLS is terminated at the
+        // proxy and the app receives plain HTTP with X-Forwarded-* headers.
+        // Trusting the proxy lets Laravel detect the original HTTPS request so
+        // secure cookies and generated URLs are correct.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
             'active' => EnsureUserIsActive::class,
