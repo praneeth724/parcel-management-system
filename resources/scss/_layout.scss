@@ -1,0 +1,199 @@
+// -----------------------------------------------------------------------------
+// App shell: fixed sidebar + sticky topbar + scrolling content area.
+// -----------------------------------------------------------------------------
+
+@use 'variables' as *;
+
+body {
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+}
+
+// --- Sidebar ---------------------------------------------------------------
+
+.app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: $sidebar-width;
+    z-index: 1040;
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+    color: rgba(255, 255, 255, 0.75);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.25s ease;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    &__brand {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        height: $topbar-height;
+        padding: 0 1.25rem;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.05rem;
+        letter-spacing: -0.01em;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        flex-shrink: 0;
+
+        &:hover { color: #fff; }
+
+        i { font-size: 1.4rem; color: $primary; }
+    }
+
+    &__nav {
+        padding: 1rem 0.75rem 2rem;
+        flex: 1;
+    }
+
+    &__heading {
+        padding: 1.25rem 0.75rem 0.4rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.38);
+    }
+
+    &__footer {
+        padding: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        flex-shrink: 0;
+    }
+}
+
+.app-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    margin-bottom: 0.15rem;
+    border-radius: $border-radius;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.15s ease, color 0.15s ease;
+
+    i {
+        font-size: 1.05rem;
+        width: 1.25rem;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    &:hover {
+        background-color: rgba(255, 255, 255, 0.07);
+        color: #fff;
+    }
+
+    &.active {
+        background-color: $primary;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(26, 86, 219, 0.4);
+    }
+
+    .badge { margin-left: auto; }
+}
+
+// --- Main column -----------------------------------------------------------
+
+.app-main {
+    margin-left: $sidebar-width;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    transition: margin-left 0.25s ease;
+}
+
+.app-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    height: $topbar-height;
+    background-color: #fff;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 1.5rem;
+}
+
+.app-content {
+    flex: 1;
+    padding: 1.5rem;
+}
+
+.app-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+    font-size: 0.825rem;
+    color: $secondary;
+}
+
+// --- Mobile ----------------------------------------------------------------
+
+.sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    z-index: 1035;
+    display: none;
+}
+
+@media (max-width: 991.98px) {
+    .app-sidebar { transform: translateX(-100%); }
+    .app-main    { margin-left: 0; }
+
+    body.sidebar-open {
+        .app-sidebar     { transform: translateX(0); }
+        .sidebar-backdrop { display: block; }
+        overflow: hidden;
+    }
+}
+
+// --- Guest (auth) pages ----------------------------------------------------
+
+.auth-shell {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr;
+
+    @media (min-width: 992px) {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.auth-showcase {
+    display: none;
+    position: relative;
+    padding: 3rem;
+    color: #fff;
+    background:
+        linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(26, 86, 219, 0.9)),
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.12), transparent 55%);
+    background-color: #0f172a;
+
+    @media (min-width: 992px) {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+}
+
+.auth-form-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.25rem;
+    background-color: #fff;
+
+    > div {
+        width: 100%;
+        max-width: 26rem;
+    }
+}

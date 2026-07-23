@@ -1,0 +1,12 @@
+// -----------------------------------------------------------------------------
+// SwiftTrack Courier — application stylesheet
+// -----------------------------------------------------------------------------
+
+@use 'variables' as *;
+
+@import 'bootstrap/scss/bootstrap';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+@import 'layout';
+@import 'components';
+@import 'print';

@@ -1,0 +1,111 @@
+// -----------------------------------------------------------------------------
+// Print rules for the shipping label and report printouts.
+// -----------------------------------------------------------------------------
+
+@media print {
+    .app-sidebar,
+    .app-topbar,
+    .app-footer,
+    .no-print,
+    .btn,
+    .alert-dismissible .btn-close {
+        display: none !important;
+    }
+
+    .app-main    { margin-left: 0 !important; }
+    .app-content { padding: 0 !important; }
+
+    body {
+        background: #fff !important;
+        font-size: 12px;
+    }
+
+    .table-card,
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+    }
+
+    .shipping-label {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    a[href]::after { content: none !important; }
+}
+
+// Shipping label — sized for a 100 × 150 mm thermal label.
+.shipping-label {
+    width: 100mm;
+    min-height: 150mm;
+    margin: 0 auto;
+    padding: 6mm;
+    background: #fff;
+    border: 1px solid #000;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #000;
+
+    &__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 2px solid #000;
+        padding-bottom: 3mm;
+        margin-bottom: 3mm;
+    }
+
+    &__brand { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
+
+    &__priority {
+        border: 2px solid #000;
+        padding: 1mm 3mm;
+        font-weight: 700;
+        font-size: 11px;
+        text-transform: uppercase;
+    }
+
+    &__section { margin-bottom: 3mm; }
+
+    &__label {
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        border-bottom: 1px solid #000;
+        margin-bottom: 1mm;
+    }
+
+    &__value { font-size: 12px; line-height: 1.35; }
+
+    &__tracking {
+        text-align: center;
+        border-top: 2px solid #000;
+        border-bottom: 2px solid #000;
+        padding: 2mm 0;
+        margin: 3mm 0;
+        font-family: 'SFMono-Regular', Consolas, monospace;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2mm;
+        font-size: 11px;
+    }
+
+    &__qr {
+        text-align: center;
+        svg { width: 34mm; height: 34mm; }
+    }
+
+    &__footer {
+        border-top: 1px solid #000;
+        padding-top: 2mm;
+        margin-top: 3mm;
+        font-size: 9px;
+        text-align: center;
+    }
+}
