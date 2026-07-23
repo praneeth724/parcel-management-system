@@ -29,6 +29,7 @@ FROM php:8.3-fpm-bookworm AS app
 
 # System libraries needed by the PHP extensions below.
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
         nginx \
         supervisor \
         git \
@@ -39,6 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libpng-dev \
         libjpeg62-turbo-dev \
         libfreetype6-dev \
+    && update-ca-certificates \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" \
         pdo_mysql \

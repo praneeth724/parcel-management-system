@@ -19,18 +19,36 @@ if [ -z "${APP_KEY:-}" ]; then
     exit 1
 fi
 
-# --- 3. Wait for the database, then migrate --------------------------------
-# TiDB/MySQL may take a few seconds to accept connections on a cold start.
-echo "Waiting for the database..."
+# --- 3. Wait for the database and ensure it exists -------------------------
+# TiDB Serverless can take a few seconds to wake on a cold start, and the
+# target database may not exist yet. This connects WITHOUT a database name
+# (so it works on a fresh cluster), creates the database if needed, and
+# retries while TiDB warms up. On the final failure it prints the real error
+# instead of hiding it.
+echo "Connecting to the database and ensuring it exists..."
 for i in $(seq 1 30); do
-    if php artisan db:show >/dev/null 2>&1; then
-        echo "Database is reachable."
+    if php -r '
+        $host = getenv("DB_HOST");
+        $port = getenv("DB_PORT") ?: "4000";
+        $user = getenv("DB_USERNAME");
+        $pass = getenv("DB_PASSWORD");
+        $name = getenv("DB_DATABASE");
+        $ca   = getenv("MYSQL_ATTR_SSL_CA");
+        $options = [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION];
+        if ($ca) { $options[PDO::MYSQL_ATTR_SSL_CA] = $ca; }
+        $pdo = new PDO("mysql:host={$host};port={$port}", $user, $pass, $options);
+        $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    ' 2>/tmp/db_error; then
+        echo "Database is reachable and ready."
         break
     fi
     if [ "$i" -eq 30 ]; then
-        echo "FATAL: could not reach the database after 30 attempts. Check the DB_* env vars and MYSQL_ATTR_SSL_CA."
+        echo "FATAL: could not connect to the database after 30 attempts. Real error:"
+        cat /tmp/db_error
+        echo "--> Check DB_HOST / DB_PORT / DB_USERNAME / DB_PASSWORD, that TLS is required (MYSQL_ATTR_SSL_CA), and that TiDB allows this connection."
         exit 1
     fi
+    echo "  attempt ${i}/30 failed, retrying in 2s..."
     sleep 2
 done
 
