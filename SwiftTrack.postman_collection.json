@@ -1,0 +1,932 @@
+{
+	"info": {
+		"_postman_id": "a1f4c9e2-7b3d-4e91-8c62-5a0d6e2f1b74",
+		"name": "SwiftTrack Courier — REST API v1",
+		"description": "Full Postman collection for the SwiftTrack Courier parcel-management REST API (Laravel + Sanctum).\n\n## Getting started\n1. Select the **SwiftTrack (Local)** environment, or just use the collection variables below.\n2. Run **Auth → Login**. The test script automatically stores the returned bearer token in the `token` collection variable, so every other request is authenticated for you.\n3. Run any other request.\n\n## Variables\n| Variable | Default | Notes |\n|---|---|---|\n| `base_url` | `http://localhost:8000/api/v1` | API root |\n| `token` | _(empty)_ | Filled automatically after Login |\n| `tracking_number` | `SWT-20260722-K4F9C2` | Used by public tracking |\n| `parcel_id` / `delivery_id` / `customer_id` / `driver_id` / `branch_id` | `1` | Path ids for detail/action calls |\n\n## Demo logins (all use password `password`)\n- Super Admin: `admin@swifttrack.lk`\n- Branch Manager: `manager.colombo@swifttrack.lk`\n- Dispatcher: `dispatcher.colombo@swifttrack.lk`\n- Driver: `driver1@swifttrack.lk`\n\nEvery request sends `Accept: application/json`. Authenticated requests inherit `Authorization: Bearer {{token}}` from the collection.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{ "key": "base_url", "value": "http://localhost:8000/api/v1", "type": "string" },
+		{ "key": "token", "value": "", "type": "string" },
+		{ "key": "tracking_number", "value": "SWT-20260722-K4F9C2", "type": "string" },
+		{ "key": "parcel_id", "value": "1", "type": "string" },
+		{ "key": "delivery_id", "value": "1", "type": "string" },
+		{ "key": "customer_id", "value": "1", "type": "string" },
+		{ "key": "driver_id", "value": "1", "type": "string" },
+		{ "key": "branch_id", "value": "1", "type": "string" }
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"description": "Session management. Login is public; the rest require a bearer token.",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res && res.data && res.data.token) {",
+									"    pm.collectionVariables.set('token', res.data.token);",
+									"    console.log('Token saved to collection variable `token`.');",
+									"}",
+									"pm.test('Login succeeded', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200]);",
+									"    pm.expect(res.success).to.be.true;",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@swifttrack.lk\",\n  \"password\": \"password\",\n  \"device_name\": \"Postman\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": [ "{{base_url}}" ],
+							"path": [ "auth", "login" ]
+						},
+						"description": "Public. Exchanges credentials for a Sanctum bearer token. Rate limited to 10/min per IP plus a 5-attempt lockout per email+IP. A deactivated account returns 422 with the same message as a wrong password.\n\nSwap the email to test other roles (all use password `password`):\n- `admin@swifttrack.lk` (Super Admin)\n- `manager.colombo@swifttrack.lk` (Branch Manager)\n- `dispatcher.colombo@swifttrack.lk` (Dispatcher)\n- `driver1@swifttrack.lk` (Driver)"
+					}
+				},
+				{
+					"name": "Me",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": [ "{{base_url}}" ],
+							"path": [ "auth", "me" ]
+						},
+						"description": "Returns the authenticated user with their branch and driver record."
+					}
+				},
+				{
+					"name": "Change password",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"current_password\": \"password\",\n  \"password\": \"BrandNew123\",\n  \"password_confirmation\": \"BrandNew123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/password",
+							"host": [ "{{base_url}}" ],
+							"path": [ "auth", "password" ]
+						},
+						"description": "Revokes all other tokens; the current token survives so the caller is not logged out mid-session."
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/auth/logout",
+							"host": [ "{{base_url}}" ],
+							"path": [ "auth", "logout" ]
+						},
+						"description": "Revokes only the token used for this request. Other devices stay signed in."
+					}
+				},
+				{
+					"name": "Logout all",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/auth/logout-all",
+							"host": [ "{{base_url}}" ],
+							"path": [ "auth", "logout-all" ]
+						},
+						"description": "Revokes every token belonging to the user."
+					}
+				},
+				{
+					"name": "Forgot password",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@swifttrack.lk\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/forgot-password",
+							"host": [ "{{base_url}}" ],
+							"path": [ "auth", "forgot-password" ]
+						},
+						"description": "Public. Always answers 200 with the same message whether or not the address is registered, so staff accounts cannot be enumerated. Rate limited to 6/min."
+					}
+				}
+			]
+		},
+		{
+			"name": "Public tracking",
+			"item": [
+				{
+					"name": "Track parcel",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/track/{{tracking_number}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "track", "{{tracking_number}}" ]
+						},
+						"description": "No authentication. This is what a QR-code scan resolves to. The payload is deliberately reduced — names masked, addresses/phones withheld. Rate limited to 60/min. 404 when no parcel has that tracking number."
+					}
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/dashboard",
+							"host": [ "{{base_url}}" ],
+							"path": [ "dashboard" ]
+						},
+						"description": "Figures scoped to the caller's role: Super Admin (whole network + branch_performance), Branch Manager (own branch), Dispatcher (own branch, revenue removed), Driver (own workload). A Driver with no linked driver record receives 409."
+					}
+				}
+			]
+		},
+		{
+			"name": "Parcels",
+			"item": [
+				{
+					"name": "List parcels",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/parcels?per_page=25&page=1",
+							"host": [ "{{base_url}}" ],
+							"path": [ "parcels" ],
+							"query": [
+								{ "key": "per_page", "value": "25" },
+								{ "key": "page", "value": "1" },
+								{ "key": "search", "value": "SWT-2026", "disabled": true, "description": "Tracking number, receiver, phone, city, or customer name/code" },
+								{ "key": "status", "value": "out_for_delivery", "disabled": true, "description": "pending | picked_up | at_warehouse | out_for_delivery | delivered | failed_delivery | returned | cancelled" },
+								{ "key": "priority", "value": "express", "disabled": true, "description": "normal | express | same_day" },
+								{ "key": "customer_id", "value": "12", "disabled": true },
+								{ "key": "branch_id", "value": "3", "disabled": true, "description": "Ignored for non-admins" },
+								{ "key": "driver_id", "value": "7", "disabled": true },
+								{ "key": "from", "value": "2026-07-01", "disabled": true, "description": "Booking date range, inclusive" },
+								{ "key": "to", "value": "2026-07-24", "disabled": true }
+							]
+						},
+						"description": "List, filter and search parcels. Enable the disabled query params to filter."
+					}
+				},
+				{
+					"name": "Create parcel",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customer_id\": 1,\n  \"branch_id\": 1,\n  \"receiver_name\": \"Kamala Silva\",\n  \"receiver_phone\": \"0771234567\",\n  \"receiver_address\": \"42, Temple Road\",\n  \"receiver_city\": \"Kandy\",\n  \"receiver_postal_code\": \"20000\",\n  \"pickup_address\": \"10, Galle Road, Colombo 03\",\n  \"parcel_type\": \"package\",\n  \"weight\": 2.5,\n  \"length_cm\": 30,\n  \"width_cm\": 20,\n  \"height_cm\": 15,\n  \"delivery_charge\": 750.00,\n  \"cod_amount\": 4500.00,\n  \"payment_method\": \"cash_on_delivery\",\n  \"priority\": \"express\",\n  \"special_instructions\": \"Call before delivery.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/parcels",
+							"host": [ "{{base_url}}" ],
+							"path": [ "parcels" ]
+						},
+						"description": "Book a parcel. weight must be numeric > 0. receiver_phone must be a Sri Lankan mobile (07XXXXXXXX / +947XXXXXXXX / 947XXXXXXXX). Dimensions are all-or-nothing. cod_amount only allowed when payment_method is cash_on_delivery. Inactive/blacklisted customers cannot book."
+					}
+				},
+				{
+					"name": "Get parcel",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/parcels/{{parcel_id}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "parcels", "{{parcel_id}}" ]
+						},
+						"description": "Full parcel detail."
+					}
+				},
+				{
+					"name": "Update parcel",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"receiver_name\": \"Kamala Silva\",\n  \"receiver_phone\": \"0771234567\",\n  \"receiver_city\": \"Kandy\",\n  \"priority\": \"same_day\",\n  \"special_instructions\": \"Updated: leave with security.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/parcels/{{parcel_id}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "parcels", "{{parcel_id}}" ]
+						},
+						"description": "Update a parcel. Blocked once the parcel is delivered/returned/cancelled."
+					}
+				},
+				{
+					"name": "Delete parcel",
+					"request": {
+						"method": "DELETE",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/parcels/{{parcel_id}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "parcels", "{{parcel_id}}" ]
+						},
+						"description": "Soft delete."
+					}
+				},
+				{
+					"name": "Cancel parcel",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Customer requested cancellation.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/parcels/{{parcel_id}}/cancel",
+							"host": [ "{{base_url}}" ],
+							"path": [ "parcels", "{{parcel_id}}", "cancel" ]
+						},
+						"description": "Cancel the parcel and release any assigned driver."
+					}
+				},
+				{
+					"name": "List parcel trackings",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/parcels/{{parcel_id}}/trackings",
+							"host": [ "{{base_url}}" ],
+							"path": [ "parcels", "{{parcel_id}}", "trackings" ]
+						},
+						"description": "Tracking timeline for the parcel."
+					}
+				},
+				{
+					"name": "Add tracking event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"at_warehouse\",\n  \"location\": \"Colombo sorting facility\",\n  \"remarks\": \"Received and scanned.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/parcels/{{parcel_id}}/trackings",
+							"host": [ "{{base_url}}" ],
+							"path": [ "parcels", "{{parcel_id}}", "trackings" ]
+						},
+						"description": "Log a tracking event. Accepted status values: picked_up, at_warehouse, sorted, dispatched, out_for_delivery, delivered, failed_delivery, returned, note. `sorted`, `dispatched` and `note` are timeline-only. Illegal transitions return 422."
+					}
+				},
+				{
+					"name": "Get parcel QR",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/parcels/{{parcel_id}}/qr",
+							"host": [ "{{base_url}}" ],
+							"path": [ "parcels", "{{parcel_id}}", "qr" ]
+						},
+						"description": "QR payload plus an SVG data URI."
+					}
+				}
+			]
+		},
+		{
+			"name": "Deliveries",
+			"item": [
+				{
+					"name": "List deliveries",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/deliveries?per_page=25&page=1",
+							"host": [ "{{base_url}}" ],
+							"path": [ "deliveries" ],
+							"query": [
+								{ "key": "per_page", "value": "25" },
+								{ "key": "page", "value": "1" }
+							]
+						},
+						"description": "Everyone (scoped to role)."
+					}
+				},
+				{
+					"name": "Get delivery",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/deliveries/{{delivery_id}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "deliveries", "{{delivery_id}}" ]
+						},
+						"description": "Everyone (scoped to role)."
+					}
+				},
+				{
+					"name": "Assign delivery",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"parcel_id\": 42,\n  \"driver_id\": 7,\n  \"notes\": \"Fragile, handle with care.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/deliveries",
+							"host": [ "{{base_url}}" ],
+							"path": [ "deliveries" ]
+						},
+						"description": "Dispatcher / management. Rejected with 422 when the driver is inactive, licence expired, in a different branch, or the parcel exceeds vehicle capacity. Any open assignment on the parcel is closed automatically."
+					}
+				},
+				{
+					"name": "Accept delivery (driver)",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/deliveries/{{delivery_id}}/accept",
+							"host": [ "{{base_url}}" ],
+							"path": [ "deliveries", "{{delivery_id}}", "accept" ]
+						},
+						"description": "Assigned driver only."
+					}
+				},
+				{
+					"name": "Reject delivery (driver)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Vehicle breakdown; cannot take this route.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/deliveries/{{delivery_id}}/reject",
+							"host": [ "{{base_url}}" ],
+							"path": [ "deliveries", "{{delivery_id}}", "reject" ]
+						},
+						"description": "Assigned driver only."
+					}
+				},
+				{
+					"name": "Mark in-transit (driver)",
+					"request": {
+						"method": "POST",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/deliveries/{{delivery_id}}/in-transit",
+							"host": [ "{{base_url}}" ],
+							"path": [ "deliveries", "{{delivery_id}}", "in-transit" ]
+						},
+						"description": "Assigned driver only."
+					}
+				},
+				{
+					"name": "Complete delivery (driver)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"received_by\": \"Kamala Silva\",\n  \"receiver_nic\": \"199012345678\",\n  \"delivery_location\": \"42, Temple Road, Kandy\",\n  \"delivery_latitude\": 7.2906,\n  \"delivery_longitude\": 80.6337,\n  \"cod_collected\": 4500.00,\n  \"notes\": \"Left with the receiver in person.\",\n  \"signature\": \"data:image/png;base64,iVBORw0KG...\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/deliveries/{{delivery_id}}/complete",
+							"host": [ "{{base_url}}" ],
+							"path": [ "deliveries", "{{delivery_id}}", "complete" ]
+						},
+						"description": "Assigned driver only. `signature` is a base64 data URL. To attach a photo, send as multipart/form-data with a `proof_image` file part. Completing marks the parcel Delivered, settles COD, and frees the driver."
+					}
+				},
+				{
+					"name": "Fail delivery (driver)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Receiver not available at the address.\",\n  \"location\": \"Kandy\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/deliveries/{{delivery_id}}/fail",
+							"host": [ "{{base_url}}" ],
+							"path": [ "deliveries", "{{delivery_id}}", "fail" ]
+						},
+						"description": "Assigned driver only. After courier.delivery.max_attempts (default 3) failed attempts the parcel is automatically returned to sender."
+					}
+				},
+				{
+					"name": "Cancel assignment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Reassigning to a closer driver.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/deliveries/{{delivery_id}}/cancel",
+							"host": [ "{{base_url}}" ],
+							"path": [ "deliveries", "{{delivery_id}}", "cancel" ]
+						},
+						"description": "Dispatcher / management."
+					}
+				}
+			]
+		},
+		{
+			"name": "Customers",
+			"item": [
+				{
+					"name": "List customers",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/customers?per_page=25&page=1",
+							"host": [ "{{base_url}}" ],
+							"path": [ "customers" ],
+							"query": [
+								{ "key": "per_page", "value": "25" },
+								{ "key": "page", "value": "1" },
+								{ "key": "search", "value": "", "disabled": true },
+								{ "key": "status", "value": "active", "disabled": true, "description": "active | inactive | blacklisted" },
+								{ "key": "city", "value": "Colombo", "disabled": true }
+							]
+						}
+					}
+				},
+				{
+					"name": "Create customer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Nimal Perera\",\n  \"phone\": \"0771234567\",\n  \"email\": \"nimal.perera@example.lk\",\n  \"nic\": \"199012345678\",\n  \"address\": \"10, Galle Road, Colombo 03\",\n  \"city\": \"Colombo\",\n  \"postal_code\": \"00300\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/customers",
+							"host": [ "{{base_url}}" ],
+							"path": [ "customers" ]
+						},
+						"description": "customer_code is generated automatically (CUS-2026-00042). NIC and mobile are unique among live records only."
+					}
+				},
+				{
+					"name": "Get customer",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/customers/{{customer_id}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "customers", "{{customer_id}}" ]
+						}
+					}
+				},
+				{
+					"name": "Update customer",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Nimal Perera\",\n  \"phone\": \"0771234567\",\n  \"city\": \"Colombo\",\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/customers/{{customer_id}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "customers", "{{customer_id}}" ]
+						}
+					}
+				},
+				{
+					"name": "Delete customer",
+					"request": {
+						"method": "DELETE",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/customers/{{customer_id}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "customers", "{{customer_id}}" ]
+						},
+						"description": "Soft delete, management only."
+					}
+				},
+				{
+					"name": "Customer parcels",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/customers/{{customer_id}}/parcels",
+							"host": [ "{{base_url}}" ],
+							"path": [ "customers", "{{customer_id}}", "parcels" ]
+						},
+						"description": "Shipment history for the customer."
+					}
+				}
+			]
+		},
+		{
+			"name": "Drivers",
+			"item": [
+				{
+					"name": "List drivers",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/drivers?per_page=25&page=1",
+							"host": [ "{{base_url}}" ],
+							"path": [ "drivers" ],
+							"query": [
+								{ "key": "per_page", "value": "25" },
+								{ "key": "page", "value": "1" },
+								{ "key": "search", "value": "", "disabled": true },
+								{ "key": "status", "value": "available", "disabled": true, "description": "available | on_delivery | inactive" },
+								{ "key": "branch_id", "value": "1", "disabled": true }
+							]
+						}
+					}
+				},
+				{
+					"name": "Create driver",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{ "key": "full_name", "value": "Sunil Perera", "type": "text" },
+								{ "key": "phone", "value": "0774000001", "type": "text" },
+								{ "key": "email", "value": "sunil.perera@swifttrack.lk", "type": "text" },
+								{ "key": "license_number", "value": "B1234567", "type": "text" },
+								{ "key": "license_expiry", "value": "2028-12-31", "type": "text" },
+								{ "key": "vehicle_number", "value": "WP-1234", "type": "text" },
+								{ "key": "vehicle_type", "value": "motorbike", "type": "text", "description": "motorbike | three_wheeler | van | lorry | car" },
+								{ "key": "branch_id", "value": "1", "type": "text" },
+								{ "key": "photo", "type": "file", "src": [], "description": "Optional driver photo" }
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/drivers",
+							"host": [ "{{base_url}}" ],
+							"path": [ "drivers" ]
+						},
+						"description": "Send as multipart/form-data to include a `photo`. driver_code is generated automatically (DRV-2026-00007)."
+					}
+				},
+				{
+					"name": "Get driver",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/drivers/{{driver_id}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "drivers", "{{driver_id}}" ]
+						}
+					}
+				},
+				{
+					"name": "Update driver",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"full_name\": \"Sunil Perera\",\n  \"phone\": \"0774000001\",\n  \"status\": \"available\",\n  \"vehicle_number\": \"WP-1234\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/drivers/{{driver_id}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "drivers", "{{driver_id}}" ]
+						}
+					}
+				},
+				{
+					"name": "Delete driver",
+					"request": {
+						"method": "DELETE",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/drivers/{{driver_id}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "drivers", "{{driver_id}}" ]
+						},
+						"description": "Refused while the driver has open deliveries."
+					}
+				},
+				{
+					"name": "Driver deliveries",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/drivers/{{driver_id}}/deliveries",
+							"host": [ "{{base_url}}" ],
+							"path": [ "drivers", "{{driver_id}}", "deliveries" ]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Branches",
+			"item": [
+				{
+					"name": "List branches",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/branches?per_page=25&page=1",
+							"host": [ "{{base_url}}" ],
+							"path": [ "branches" ],
+							"query": [
+								{ "key": "per_page", "value": "25" },
+								{ "key": "page", "value": "1" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Create branch",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"code\": \"NEG-06\",\n  \"name\": \"Negombo Branch\",\n  \"address\": \"No. 21, Main Street, Negombo\",\n  \"city\": \"Negombo\",\n  \"postal_code\": \"11500\",\n  \"contact_number\": \"0312234567\",\n  \"email\": \"negombo@swifttrack.lk\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/branches",
+							"host": [ "{{base_url}}" ],
+							"path": [ "branches" ]
+						},
+						"description": "Super Admin only."
+					}
+				},
+				{
+					"name": "Get branch",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/branches/{{branch_id}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "branches", "{{branch_id}}" ]
+						}
+					}
+				},
+				{
+					"name": "Update branch",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Colombo Head Office\",\n  \"contact_number\": \"0112345678\",\n  \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/branches/{{branch_id}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "branches", "{{branch_id}}" ]
+						}
+					}
+				},
+				{
+					"name": "Delete branch",
+					"request": {
+						"method": "DELETE",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/branches/{{branch_id}}",
+							"host": [ "{{base_url}}" ],
+							"path": [ "branches", "{{branch_id}}" ]
+						},
+						"description": "Refused while parcels are in transit."
+					}
+				},
+				{
+					"name": "Branch parcels",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/branches/{{branch_id}}/parcels",
+							"host": [ "{{base_url}}" ],
+							"path": [ "branches", "{{branch_id}}", "parcels" ]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Reports",
+			"description": "All five accept `from`, `to`, and where relevant `branch_id`, `driver_id`, `customer_id`. A Branch Manager's scope is forced to their own branch. Drivers receive 403.",
+			"item": [
+				{
+					"name": "Daily shipments",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/reports/daily-shipments?from=2026-07-01&to=2026-07-24",
+							"host": [ "{{base_url}}" ],
+							"path": [ "reports", "daily-shipments" ],
+							"query": [
+								{ "key": "from", "value": "2026-07-01" },
+								{ "key": "to", "value": "2026-07-24" },
+								{ "key": "branch_id", "value": "1", "disabled": true }
+							]
+						},
+						"description": "Per-day counts and revenue."
+					}
+				},
+				{
+					"name": "Monthly revenue",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/reports/monthly-revenue?from=2026-01-01&to=2026-07-24",
+							"host": [ "{{base_url}}" ],
+							"path": [ "reports", "monthly-revenue" ],
+							"query": [
+								{ "key": "from", "value": "2026-01-01" },
+								{ "key": "to", "value": "2026-07-24" },
+								{ "key": "branch_id", "value": "1", "disabled": true }
+							]
+						},
+						"description": "Collected, outstanding, refunded, by method."
+					}
+				},
+				{
+					"name": "Driver performance",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/reports/driver-performance?from=2026-07-01&to=2026-07-24",
+							"host": [ "{{base_url}}" ],
+							"path": [ "reports", "driver-performance" ],
+							"query": [
+								{ "key": "from", "value": "2026-07-01" },
+								{ "key": "to", "value": "2026-07-24" },
+								{ "key": "branch_id", "value": "1", "disabled": true },
+								{ "key": "driver_id", "value": "7", "disabled": true }
+							]
+						},
+						"description": "Assignments, outcomes, success rate."
+					}
+				},
+				{
+					"name": "Customer shipments",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/reports/customer-shipments?from=2026-07-01&to=2026-07-24",
+							"host": [ "{{base_url}}" ],
+							"path": [ "reports", "customer-shipments" ],
+							"query": [
+								{ "key": "from", "value": "2026-07-01" },
+								{ "key": "to", "value": "2026-07-24" },
+								{ "key": "customer_id", "value": "12", "disabled": true }
+							]
+						},
+						"description": "Volume and spend per customer."
+					}
+				},
+				{
+					"name": "Deliveries report",
+					"request": {
+						"method": "GET",
+						"header": [ { "key": "Accept", "value": "application/json" } ],
+						"url": {
+							"raw": "{{base_url}}/reports/deliveries?from=2026-07-01&to=2026-07-24",
+							"host": [ "{{base_url}}" ],
+							"path": [ "reports", "deliveries" ],
+							"query": [
+								{ "key": "from", "value": "2026-07-01" },
+								{ "key": "to", "value": "2026-07-24" },
+								{ "key": "branch_id", "value": "1", "disabled": true },
+								{ "key": "driver_id", "value": "7", "disabled": true }
+							]
+						},
+						"description": "Row per delivery."
+					}
+				}
+			]
+		}
+	]
+}
